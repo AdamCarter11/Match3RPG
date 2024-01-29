@@ -21,66 +21,55 @@ public class Tile : MonoBehaviour
         y = _y;
         type = _type;
 
-        if(type == 0)
+        SetTileColor();
+    }
+
+    private void SetTileColor()
+    {
+        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+
+        switch (type)
         {
-            GetComponent<SpriteRenderer>().color = Color.green;
-        }
-        else if(type == 1)
-        {
-            GetComponent<SpriteRenderer>().color = Color.blue;
-        }
-        else if(type == 2)
-        {
-            GetComponent<SpriteRenderer>().color = Color.red;
-        }
-        else if(type == 3)
-        {
-            GetComponent<SpriteRenderer>().color = Color.yellow;
+            case 0:
+                spriteRenderer.color = Color.green;
+                break;
+            case 1:
+                spriteRenderer.color = Color.blue;
+                break;
+            case 2:
+                spriteRenderer.color = Color.red;
+                break;
+            case 3:
+                spriteRenderer.color = Color.yellow;
+                break;
+            default:
+                break;
         }
     }
 
     public void Swap(Tile targetTile)
     {
-        gridManager.StartCoroutine(AnimateSwap(transform.position, targetTile.transform.position, 0.2f, targetTile));
+        Vector3 startPos = transform.position;
+        Vector3 endPos = targetTile.transform.position;
+
+        // Swap positions instantly
+        transform.position = endPos;
+        targetTile.transform.position = startPos;
     }
 
-    IEnumerator AnimateSwap(Vector3 startPos, Vector3 endPos, float duration, Tile otherTile)
-    {
-        if(otherTile != null)
-        {
-            float elapsedTime = 0f;
-
-            while (elapsedTime < duration)
-            {
-                if(this != null)
-                    transform.position = Vector3.Lerp(startPos, endPos, elapsedTime / duration);
-                if(otherTile != null)
-                    otherTile.transform.position = Vector3.Lerp(endPos, startPos, elapsedTime / duration);
-
-                elapsedTime += Time.deltaTime;
-                yield return null;
-            }
-            
-            if(this != null)
-                transform.position = endPos;
-            if(otherTile != null)
-                otherTile.transform.position = startPos;
-        }
-    }
-    public IEnumerator AnimateTileFall(Vector3 targetPosition, float duration)
+    public void AnimateTileFall(Vector3 targetPosition, float duration)
     {
         float elapsedTime = 0f;
         Vector3 initialPosition = transform.position;
 
         while (elapsedTime < duration)
         {
-            if(this != null)
+            if (this != null)
                 transform.position = Vector3.Lerp(initialPosition, targetPosition, elapsedTime / duration);
             elapsedTime += Time.deltaTime;
-            yield return null;
         }
 
-        if(this != null)
+        if (this != null)
             transform.position = targetPosition;
     }
 }

@@ -6,6 +6,7 @@ public class GridManager : MonoBehaviour
 {
     [SerializeField] int width;
     [SerializeField] int height;
+    [SerializeField] int offsetX, offsetY;
     [SerializeField] GameObject tilePrefab;
 
     private Tile[,] grid;
@@ -129,9 +130,6 @@ public class GridManager : MonoBehaviour
         // Determine the total number of matches
         int totalMatches = horizontalMatches + verticalMatches + 1; // +1 for the startTile itself
 
-        // Implement your logic for handling matches here
-        // For example, you might destroy matched tiles, update the score, etc.
-
         // Destroy the matched tiles
         DestroyMatches(startTile, horizontalMatches, verticalMatches);
 
@@ -141,30 +139,44 @@ public class GridManager : MonoBehaviour
         // Play a sound effect or trigger other game events
         PlayMatchSoundEffect();
 
+        // Check for new matches
         CheckMatches();
     }
-
     void DestroyMatches(Tile startTile, int horizontalMatches, int verticalMatches)
     {
         // Destroy the horizontally matched tiles
         for (int i = 0; i < horizontalMatches; i++)
         {
-            Tile matchedTile = grid[startTile.x + i, startTile.y];
-            if (matchedTile != null && matchedTile.gameObject != null)
+            int tileX = startTile.x + i;
+            int tileY = startTile.y;
+
+            // Check if the indices are within the valid range
+            if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height)
             {
-                Destroy(matchedTile.gameObject);
-                grid[startTile.x + i, startTile.y] = null;
+                Tile matchedTile = grid[tileX, tileY];
+                if (matchedTile != null && matchedTile.gameObject != null)
+                {
+                    Destroy(matchedTile.gameObject);
+                    grid[tileX, tileY] = null;
+                }
             }
         }
 
         // Destroy the vertically matched tiles
         for (int i = 0; i < verticalMatches; i++)
         {
-            Tile matchedTile = grid[startTile.x, startTile.y + i];
-            if (matchedTile != null && matchedTile.gameObject != null)
+            int tileX = startTile.x;
+            int tileY = startTile.y + i;
+
+            // Check if the indices are within the valid range
+            if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height)
             {
-                Destroy(matchedTile.gameObject);
-                grid[startTile.x, startTile.y + i] = null;
+                Tile matchedTile = grid[tileX, tileY];
+                if (matchedTile != null && matchedTile.gameObject != null)
+                {
+                    Destroy(matchedTile.gameObject);
+                    grid[tileX, tileY] = null;
+                }
             }
         }
 
@@ -173,64 +185,54 @@ public class GridManager : MonoBehaviour
         grid[startTile.x, startTile.y] = null;
 
         // After destroying matches, spawn new tiles at the top
-        StartCoroutine(FallTilesDownAndCheckMatches());
+        FallTilesDownAndCheckMatches();
     }
 
-    IEnumerator FallTilesDownAndCheckMatches()
+    void FallTilesDownAndCheckMatches()
     {
-        // Wait for a short delay before starting the falling effect
-        yield return new WaitForSeconds(0.2f);
-
         // Fall tiles down
-        StartCoroutine(FallTilesDown());
-
-        // Wait for a short delay before checking matches again
-        yield return new WaitForSeconds(0.5f);
+        FallTilesDown();
 
         // Check for new matches
         CheckMatches();
     }
-    IEnumerator FallTilesDown()
-    {
-        // Wait for a short delay before starting the falling effect
-        yield return new WaitForSeconds(0.2f);
 
+    void FallTilesDown()
+    {
         // Loop through each column
         for (int x = 0; x < width; x++)
         {
+            int newY = 0; // Variable to keep track of the new Y position
+
             // Shift non-null tiles down to fill empty spaces
-            for (int y = 1; y < height; y++)
+            for (int y = 0; y < height; y++)
             {
                 if (grid[x, y] != null)
                 {
                     Tile tile = grid[x, y];
-                    int newY = y;
 
-                    // Check for empty spaces below and shift the tile down
-                    while (newY > 0 && grid[x, newY - 1] == null)
-                    {
-                        newY--;
-                    }
+                    // Move the tile down visually
+                    tile.transform.position = new Vector3(x, newY, 0);
 
-                    if (newY != y)
-                    {
-                        // Move the tile down visually
-                        StartCoroutine(tile.AnimateTileFall(new Vector3(x, newY, 0), 0.5f));
+                    // Update the grid
+                    grid[x, y] = null;
+                    grid[x, newY] = tile;
+                    tile.y = newY;
 
-                        // Update the grid
-                        grid[x, y] = null;
-                        grid[x, newY] = tile;
-                        tile.y = newY;
-                    }
+                    newY++; // Increment the new Y position
                 }
             }
-        }
 
-        // Spawn new tiles at the top after the falling effect
-        SpawnNewTiles();
+            // If there's an empty space after the fall, spawn a new tile at the top
+            while (newY < height)
+            {
+                CreateTile(x, newY, Random.Range(0, 3)); // Adjust the range based on the number of tile types/colors
+                newY++;
+            }
+        }
     }
 
-    void SpawnNewTiles()
+    void SpawnNewTilesAtTop()
     {
         // Loop through each column
         for (int x = 0; x < width; x++)
@@ -240,34 +242,11 @@ public class GridManager : MonoBehaviour
             {
                 if (grid[x, y] == null)
                 {
-                    // Determine the number of empty spaces above the current position
-                    int emptySpacesAbove = CountEmptySpacesAbove(x, y);
-
                     // Spawn a new tile at the top of the visible grid
-                    CreateTile(x, height - 1 - emptySpacesAbove, Random.Range(0, 3)); // Adjust the range based on the number of tile types/colors
-
-                    // Animate the new tile falling into place
-                    StartCoroutine(AnimateTileFall(grid[x, height - 1 - emptySpacesAbove], new Vector3(x, y, 0), 0.5f)); // Adjust the duration as needed
+                    CreateTile(x, y, Random.Range(0, 3)); // Adjust the range based on the number of tile types/colors
                 }
             }
         }
-    }
-
-    IEnumerator AnimateTileFall(Tile tile, Vector3 targetPosition, float duration)
-    {
-        float elapsedTime = 0f;
-        Vector3 initialPosition = tile.transform.position;
-
-        while (elapsedTime < duration)
-        {
-            if(tile != null)
-                tile.transform.position = Vector3.Lerp(initialPosition, targetPosition, elapsedTime / duration);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        if(tile != null)
-            tile.transform.position = targetPosition;
     }
 
     int CountEmptySpacesAbove(int x, int y)
@@ -287,15 +266,12 @@ public class GridManager : MonoBehaviour
 
     void UpdateScore(int totalMatches)
     {
-        // Implement your score logic here
-        // For example, you might increment a score variable based on the number of matches.
-        // You could also update a UI element to display the current score.
+        // score logic
     }
 
     void PlayMatchSoundEffect()
     {
-        // Implement your sound effect logic here
-        // For example, you might play a sound effect when matches are made.
+        // sound effects
     }
 
     bool AreTilesAdjacent(Tile tile1, Tile tile2)
